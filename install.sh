@@ -18,11 +18,6 @@ on_install() {
     abort "! Boot animation cannot be replaced with Magisk on Android 8.0 and higher!"
   fi
 
-  ui_print "- Checking libc++ presence"
-
-  [ -n "`find /system/lib* -name libc++.so`" ] ||
-  abort "! Unable to find libc++.so!"
-
   local ABI=
   case $ARCH in
     arm) ABI=armeabi-v7a ;;
@@ -35,15 +30,18 @@ on_install() {
 
   mkdir -p $MODPATH/system/bin
   unzip -o "$ZIPFILE" bootanimation-$ABI -d $MODPATH/system/bin >&2
-  mv $MODPATH/system/bin/bootanimation-$ABI $MODPATH/system/bin/bootanimation >&2
-  [ -e $MODPATH/system/bin/bootanimation ] ||
+  mv $MODPATH/system/bin/bootanimation-$ABI $MODPATH/system/bin/foxy-boot >&2
+  [ -e $MODPATH/system/bin/foxy-boot ] ||
   abort "! Unable to extract bootanimation!"
+
+  # create symlink to bypass bootanimation permissions reset
+  ln -sf foxy-boot $MODPATH/system/bin/bootanimation
 
   ui_print "- Checking the binary"
 
-  chmod 755 $MODPATH/system/bin/bootanimation
+  chmod 755 $MODPATH/system/bin/foxy-boot
   local OUT
-  OUT="`$MODPATH/system/bin/bootanimation ldcheck 2>&1`"
+  OUT="`$MODPATH/system/bin/foxy-boot ldcheck 2>&1`"
   if [ $? -ne 0 ]; then
     for sym in `echo "$OUT" | grep -o '"[^"]*"' | grep -v '/'`; do
       ui_print "cannot locate $sym"
@@ -54,5 +52,5 @@ on_install() {
 
 set_permissions() {
   set_perm_recursive $MODPATH 0 0 0755 0644
-  set_perm $MODPATH/system/bin/bootanimation 0 2000 0755 u:object_r:bootanim_exec:s0
+  set_perm $MODPATH/system/bin/foxy-boot 0 1000 2755 u:object_r:bootanim_exec:s0
 }
